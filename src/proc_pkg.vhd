@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package proc_pkg is
 
-	subtype INSTRUCTION_T is std_logic_vector(10 downto 0);
+	subtype t_Instruction is std_logic_vector(10 downto 0);
 
 	-- IR:     A9876543210
 	-- opCode: A9876

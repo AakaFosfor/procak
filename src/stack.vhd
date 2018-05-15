@@ -6,45 +6,45 @@ use work.proc_pkg.all;
 
 entity stack is
 	generic (
-		DEPTH: integer := 16
+		g_Depth: integer := 16
 	);
 	port (
-		clk: in std_logic;
-		push: in std_logic;
-		pop: in std_logic;
-		dataIn: in std_logic_vector(7 downto 0);
-		dataOut: out std_logic_vector(7 downto 0)
+		Clk_ik: in std_logic;
+		Push_i: in std_logic;
+		Pop_i: in std_logic;
+		Data_ib: in std_logic_vector(7 downto 0);
+		Data_ob: out std_logic_vector(7 downto 0)
 	);
 end entity;
 
 architecture base of stack is
 
-	type MEMORY_T is array(0 to DEPTH-1) of std_logic_vector(dataIn'range);
-	subtype ADDRESS_T is integer range 0 to DEPTH-1;
+	type t_Memory is array(0 to g_Depth-1) of std_logic_vector(Data_ib'range);
+	subtype t_Address is integer range 0 to g_Depth-1;
 	
-	signal memory: MEMORY_T;
-	signal address: ADDRESS_T := 0;
+	signal Memory_mb: t_Memory;
+	signal Address_b: t_Address := 0;
 
 begin
 
-	pPushData: process (clk) is begin
-		if rising_edge(clk) then
-			if push = '1' and pop = '0' then
-				memory(address) <= dataIn;
+	pPushData: process (Clk_ik) is begin
+		if rising_edge(Clk_ik) then
+			if Push_i = '1' and Pop_i = '0' then
+				Memory_mb(Address_b) <= Data_ib;
 			end if;
 		end if;
 	end process;
 
-	pAddress: process (clk) is begin
-		if rising_edge(clk) then
-			if push = '1' and pop = '0' then
-				address <= (address + 1) mod DEPTH;
-			elsif pop = '1' and push = '0' then
-				address <= (address - 1) mod DEPTH;
+	pAddress: process (Clk_ik) is begin
+		if rising_edge(Clk_ik) then
+			if Push_i = '1' and Pop_i = '0' then
+				Address_b <= (Address_b + 1) mod g_Depth;
+			elsif Pop_i = '1' and Push_i = '0' then
+				Address_b <= (Address_b - 1) mod g_Depth;
 			end if;
 		end if;
 	end process;
 
-	dataOut <= memory((address-1) mod DEPTH);
+	Data_ob <= Memory_mb((Address_b-1) mod g_Depth);
 
 end architecture;

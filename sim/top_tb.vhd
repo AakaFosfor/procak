@@ -7,26 +7,26 @@ end entity;
 
 architecture testbench of top_tb is
 
-	signal clk: std_logic := '0';
-	signal reset: std_logic := '1';
-	signal portIn: std_logic_vector(7 downto 0) := (others => '0');
-	signal portOut: std_logic_vector(7 downto 0);
+	signal Clk_k: std_logic := '0';
+	signal Reset_r: std_logic := '1';
+	signal PortIn_b: std_logic_vector(7 downto 0) := (others => '0');
+	signal PortOut_b: std_logic_vector(7 downto 0);
 
 begin
 
-	cTop: entity work.top(base)
+	i_Top: entity work.top(base)
 		port map (
-			clk => clk,
-			reset => reset,
-			portIn => portIn,
-			portOut => portOut
+			Clk_ik => Clk_k,
+			Reset_ir => Reset_r,
+			Port_ib => PortIn_b,
+			Port_ob => PortOut_b
 		);
 	
-	clk <= not clk after 5 ns;
-	reset <= '0' after 20 ns;
+	Clk_k <= not Clk_k after 5 ns;
+	Reset_r <= '0' after 20 ns;
 	
 	pTimeOut: process is begin
-		portIn <= "01010101";
+		PortIn_b <= "01010101";
 		wait for 4 us;
 		assert false report "Timeout!" severity failure;
 	end process; 

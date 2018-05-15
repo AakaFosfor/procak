@@ -6,20 +6,20 @@ use work.proc_pkg.all;
 
 entity memory is
 	port (
-		clk: in std_logic;
-		address: in unsigned(7 downto 0);
-		data: out INSTRUCTION_T
+		Clk_ik: in std_logic;
+		Address_ib: in unsigned(7 downto 0);
+		Data_ob: out t_Instruction
 	);
 end entity;
 
 architecture base of memory is
 
-	type MEMORY_T is array(0 to (2**address'length)-1) of std_logic_vector(data'range);
+	type t_Memory is array(0 to (2**Address_ib'length)-1) of std_logic_vector(Data_ob'range);
 	
 	-- sum all numbers from 0 to 3
 	-- input (10) in R0
 	-- output (55) in R1
-	signal memory: MEMORY_T := (
+	signal Memory_mb: t_Memory := (
 		--- test program
 		LDI0(0),
 		MOV(R1, R0),
@@ -64,6 +64,6 @@ architecture base of memory is
 
 begin
 
-	data <= memory(to_integer(address));
+	Data_ob <= Memory_mb(to_integer(Address_ib));
 
 end architecture;
