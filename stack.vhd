@@ -12,9 +12,8 @@ entity stack is
 		clk: in std_logic;
 		push: in std_logic;
 		pop: in std_logic;
-		dataIn: out std_logic_vector(7 downto 0);
-		dataOut: out std_logic_vector(7 downto 0);
-		overFlow: out std_logic
+		dataIn: in std_logic_vector(7 downto 0);
+		dataOut: out std_logic_vector(7 downto 0)
 	);
 end entity;
 

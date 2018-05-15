@@ -38,6 +38,11 @@ architecture base of memory is
 		PUSH(R2),
 		PUSH(R0),
 		PUSH(R2),
+		POP(R5),
+		POP(R4),
+		LDI0(120),
+		PUSH(R0),
+		POP(R5),
 		--- test program 
 		LDI0(0),     --  0
 		MOV(R1, R0), --  1

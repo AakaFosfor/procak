@@ -7,7 +7,6 @@ package proc_pkg is
 	-- TODO instructions:
 	--  CALL
 	--  RET
-	--  PUSH
 	--  POP
 
 	subtype INSTRUCTION_T is std_logic_vector(10 downto 0);

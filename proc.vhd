@@ -35,9 +35,8 @@ architecture base of proc is
 	signal operand: signed(7 downto 0);
 	signal resultValue: signed(7 downto 0);
 	-- ALU
-	signal flags: std_logic_vector(1 downto 0);
+	signal flags: std_logic_vector(0 downto 0);
 		alias fZero is flags(0);
-		alias fStackO is flags(1);
 	
 	-- controller
 	constant CONTROLLER_DEFAULT: std_logic_vector(0 to 4) := (others => '0');
@@ -61,8 +60,7 @@ begin
 			push => stackPush,
 			pop => stackPop,
 			dataIn => stackDataIn,
-			dataOut => stackDataOut,
-			overFlow => fStackO
+			dataOut => stackDataOut
 		);
 
 	-- instruction pointer
@@ -99,13 +97,17 @@ begin
 					operand <= signed(portIn);
 				elsif std_match(opCode, OP_LDI0) then
 					operand <= signed(value);
+				elsif std_match(opCode, OP_POP) then
+					operand <= signed(stackDataOut);
 				else
 					operand <= memory(to_integer(unsigned(RAMa)));
 				end if;
 			end if;
 		end if;
 	end process;
-	stackPop <= '0';
+	stackPop <=
+		operandSave when std_match(opCode, OP_POP) else
+		'0';
 	
 	-- ALU and friends
 	pSaveValue: process(clk) is
@@ -122,7 +124,10 @@ begin
 					newValue := operand and memory(to_integer(unsigned(RAMb)));
 				elsif std_match(opCode, OP_OR) then
 					newValue := operand or memory(to_integer(unsigned(RAMb)));
-				elsif std_match(opCode, OP_LDI0) or std_match(opCode, OP_INP) or std_match(opCode, OP_PUSH) then
+				elsif std_match(opCode, OP_LDI0)
+					or std_match(opCode, OP_INP)
+					or std_match(opCode, OP_PUSH)
+					or std_match(opCode, OP_POP) then
 					newValue := operand;
 				else
 					newValue := (others => '0');
