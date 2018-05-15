@@ -2,12 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.proc_pkg.all;
+
 entity proc is
 	port (
 		clk: in std_logic;
 		reset: in std_logic;
 		address: out unsigned(7 downto 0);
-		instruction: in std_logic_vector(7 downto 0)
+		instruction: in INSTRUCTION_T;
+		portIn: in std_logic_vector(7 downto 0);
+		portOut: out std_logic_vector(7 downto 0) := (others => '0')
 	);
 end entity;
 
@@ -15,17 +19,15 @@ architecture base of proc is
 
 	type MEMORY_T is array(0 to 7) of signed(7 downto 0);
 	
-	constant OP_LDI0: std_logic_vector(1 downto 0) := "00";
-	constant OP_MOV: std_logic_vector(1 downto 0) := "01";
-	constant OP_ADD: std_logic_vector(1 downto 0) := "10";
-	constant OP_JMPIFN: std_logic_vector(1 downto 0) := "11";
-
+	signal stackPush, stackPop: std_logic;
+	signal stackDataIn, stackDataOut: std_logic_vector(7 downto 0);
+	
 	-- instruction pointer
 	signal IP: unsigned(7 downto 0) := (others => '0');
 	-- instruction register
-	signal IR: std_logic_vector(7 downto 0);
-		alias opCode is IR(7 downto 6);
-		alias value is IR(5 downto 0);
+	signal IR: INSTRUCTION_T;
+		alias opCode is IR(INSTRUCTION_T'high downto 6);
+		alias value is IR(7 downto 0);
 		alias RAMa is IR(5 downto 3);
 		alias RAMb is IR(2 downto 0);
 	-- scratch memory
@@ -33,20 +35,9 @@ architecture base of proc is
 	signal operand: signed(7 downto 0);
 	signal resultValue: signed(7 downto 0);
 	-- ALU
-	signal flags: std_logic_vector(0 downto 0);
+	signal flags: std_logic_vector(1 downto 0);
 		alias fZero is flags(0);
-	
-	-- IR:     76543210
-	-- opCode: 76
-	-- value:    543210
-	-- RAMa:     543
-	-- RAMb:        210
-	
-	--	opCodes:
-	--   00 - LDI0 (r0 = value)
-	--   01 - MOV (RAMa = RAMb)
-	--   10 - ADD (RAMa = RAMa + RAMb)
-	--   11 - JMPIFN (if (!fZero) IP = IP + value)
+		alias fStackO is flags(1);
 	
 	-- controller
 	constant CONTROLLER_DEFAULT: std_logic_vector(0 to 4) := (others => '0');
@@ -60,6 +51,20 @@ architecture base of proc is
 
 begin
 
+	stackDataIn <= std_logic_vector(resultValue);
+	cStack: entity work.stack(base)
+		generic map (
+			DEPTH => 16
+		)
+		port map (
+			clk => clk,
+			push => stackPush,
+			pop => stackPop,
+			dataIn => stackDataIn,
+			dataOut => stackDataOut,
+			overFlow => fStackO
+		);
+
 	-- instruction pointer
 	pIP: process(clk) is begin
 		if rising_edge(clk) then
@@ -67,7 +72,7 @@ begin
 				IP <= (others => '0');
 			else
 				if IPEnable = '1' then
-					if (opCode = OP_JMPIFN) and (fZero = '0') then
+					if std_match(opCode, OP_JMPIFN) and (fZero = '0') then
 						IP <= unsigned(signed(IP) + signed(value));
 					else
 						IP <= IP + 1;
@@ -90,28 +95,38 @@ begin
 	pOperand: process(clk) is begin
 		if rising_edge(clk) then
 			if operandSave = '1' then
-				operand <= memory(to_integer(unsigned(RAMa)));
+				if std_match(opCode, OP_INP) then
+					operand <= signed(portIn);
+				elsif std_match(opCode, OP_LDI0) then
+					operand <= signed(value);
+				else
+					operand <= memory(to_integer(unsigned(RAMa)));
+				end if;
 			end if;
 		end if;
 	end process;
+	stackPop <= '0';
 	
 	-- ALU and friends
 	pSaveValue: process(clk) is
 		variable newValue: signed(7 downto 0);
 	begin
 		if rising_edge(clk) then
-			if (execute = '1') and opCode /= OP_JMPIFN then
+			if (execute = '1') and not std_match(opCode, OP_JMPIFN) then
 				fZero <= '0';
-				case opCode is
-					when OP_LDI0 =>
-						newValue := signed(value(5)&value(5)&value);
-					when OP_MOV =>
-						newValue := memory(to_integer(unsigned(RAMb)));
-					when OP_ADD =>
-						newValue := operand + memory(to_integer(unsigned(RAMb)));
-					when others =>
-						newValue := (others => '0');
-				end case;
+				if std_match(opCode, OP_MOV) then
+					newValue := memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_ADD) then
+					newValue := operand + memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_AND) then
+					newValue := operand and memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_OR) then
+					newValue := operand or memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_LDI0) or std_match(opCode, OP_INP) or std_match(opCode, OP_PUSH) then
+					newValue := operand;
+				else
+					newValue := (others => '0');
+				end if;
 				if newValue = "00000000" then
 					fZero <= '1';
 				end if;
@@ -125,16 +140,23 @@ begin
 		variable memoryAddress: integer;
 	begin
 		if rising_edge(clk) then
-			if (memoryWrite = '1') and opCode /= OP_JMPIFN then
-				if opCode = OP_LDI0 then
-					memoryAddress := 0;
-				else
-					memoryAddress := to_integer(unsigned(RAMa));
+			if memoryWrite = '1' then
+				if not std_match(opCode, OP_JMPIFN) and not std_match(opCode, OP_OUTP) then
+					if std_match(opCode, OP_LDI0) then
+						memoryAddress := 0;
+					else
+						memoryAddress := to_integer(unsigned(RAMa));
+					end if;
+					memory(memoryAddress) <= resultValue;
+				elsif std_match(opCode, OP_OUTP) then
+					portOut <= std_logic_vector(resultValue);
 				end if;
-				memory(memoryAddress) <= resultValue;
 			end if;
 		end if;
 	end process;
+	stackPush <=
+		memoryWrite when std_match(opCode, OP_PUSH) else
+		'0';
 	
 	-- controller
 	pController: process (clk) is begin

@@ -1,0 +1,2 @@
+restart -force
+run -all
