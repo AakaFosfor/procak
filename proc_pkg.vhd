@@ -27,7 +27,7 @@ package proc_pkg is
 	--   1 0111 - PUSH (push(RAMa))
 	--   1 1000 - POP (pop(RAMa))
 	--   1 1001 - ROR (RAMa(7:0) = RAMa(0)&RAMa(7:1))
-	--   1 1010 -
+	--   1 1010 - XOR (RAMa = RAMa xor RAMb)
 	--   1 1011 -
 	--   1 1100 -
 	--   1 1101 -
@@ -47,6 +47,7 @@ package proc_pkg is
 	constant OP_PUSH:    std_logic_vector(4 downto 0) := "10111";
 	constant OP_POP:     std_logic_vector(4 downto 0) := "11000";
 	constant OP_ROR:     std_logic_vector(4 downto 0) := "11001";
+	constant OP_XOR:     std_logic_vector(4 downto 0) := "11010";
 	
 	-- registers names
 	constant R0: integer := 0;
@@ -73,6 +74,7 @@ package proc_pkg is
 	function PUSH (a: integer) return std_logic_vector;
 	function POP (a: integer) return std_logic_vector;
 	function iROR (a: integer) return std_logic_vector;
+	function iXOR(a, b: integer) return std_logic_vector;
 
 	function NOP return std_logic_vector;
 	
@@ -174,6 +176,13 @@ package body proc_pkg is
 			report "We have only 8 registers in scratch memory!"
 			severity failure;
 		return OP_ROR & std_logic_vector(to_unsigned(a, 3)) & "000";
+	end function;
+
+	function iXOR(a, b: integer) return std_logic_vector is begin
+		assert (a >= 0) and (a < 8) and (b >= 0) and (b < 8)
+			report "We have only 8 registers in scratch memory!"
+			severity failure;
+		return OP_XOR & std_logic_vector(to_unsigned(a, 3)) & std_logic_vector(to_unsigned(b, 3));
 	end function;
 
 	

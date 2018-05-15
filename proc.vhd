@@ -107,6 +107,8 @@ begin
 					newValue := operand + memory(to_integer(unsigned(RAMb)));
 				elsif std_match(opCode, OP_AND) then
 					newValue := operand and memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_XOR) then
+					newValue := operand xor memory(to_integer(unsigned(RAMb)));
 				elsif std_match(opCode, OP_OR) then
 					newValue := operand or memory(to_integer(unsigned(RAMb)));
 				elsif std_match(opCode, OP_ROR) then
