@@ -38,9 +38,9 @@ begin
 	pAddress: process (clk) is begin
 		if rising_edge(clk) then
 			if push = '1' and pop = '0' then
-				address <= address + 1;
+				address <= (address + 1) mod DEPTH;
 			elsif pop = '1' and push = '0' then
-				address <= address - 1;
+				address <= (address - 1) mod DEPTH;
 			end if;
 		end if;
 	end process;

@@ -27,7 +27,7 @@ begin
 	
 	pTimeOut: process is begin
 		portIn <= "01010101";
-		wait for 3 us;
+		wait for 4 us;
 		assert false report "Timeout!" severity failure;
 	end process; 
 

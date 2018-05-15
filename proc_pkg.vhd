@@ -4,11 +4,6 @@ use ieee.numeric_std.all;
 
 package proc_pkg is
 
-	-- TODO instructions:
-	--  CALL
-	--  RET
-	--  POP
-
 	subtype INSTRUCTION_T is std_logic_vector(10 downto 0);
 
 	-- IR:     A9876543210
@@ -19,38 +14,39 @@ package proc_pkg is
 	
 	--	opCodes:
 	--   0 00   - LDI0 (r0 = value)
-	--   0 01   - JMPIFN (if (!fZero) IP = IP + value)
+	--   0 01   - JMP (IP = value)
+	--   0 10   - RJMPIFN (if (!fZero) IP = IP + value)
 	--   0 10   - CALL (push(IP), IP = value)
-	--   0 11   -
 	--   1 0000 - MOV (RAMa = RAMb)
 	--   1 0001 - AND (RAMa = RAMa and RAMb)
 	--   1 0010 - OR (RAMa = RAMa or RAMb)
 	--   1 0011 - ADD (RAMa = RAMa + RAMb)
 	--   1 0100 - INP (RAMa = portIn)
 	--   1 0101 - OUTP (portOut = RAMa)
-	--   1 0110 - RET (pop(IP))
+	--   1 0110 - RET (IP = pop() + 1)
 	--   1 0111 - PUSH (push(RAMa))
 	--   1 1000 - POP (pop(RAMa))
-	--   1 1001 -
+	--   1 1001 - ROR (RAMa(7:0) = RAMa(0)&RAMa(7:1))
 	--   1 1010 -
 	--   1 1011 -
 	--   1 1100 -
 	--   1 1101 -
 	--   1 1110 -
 	--   1 1111 - 
-	constant OP_LDI0:   std_logic_vector(4 downto 0) := "000--";
-	constant OP_JMPIFN: std_logic_vector(4 downto 0) := "001--";
-	constant OP_CALL:   std_logic_vector(4 downto 0) := "010--";
-	--nstant XXXXXXX:   std_logic_vector(4 downto 0) := "011--";
-	constant OP_MOV:    std_logic_vector(4 downto 0) := "10000";
-	constant OP_AND:    std_logic_vector(4 downto 0) := "10001";
-	constant OP_OR:     std_logic_vector(4 downto 0) := "10010";
-	constant OP_ADD:    std_logic_vector(4 downto 0) := "10011";
-	constant OP_INP:    std_logic_vector(4 downto 0) := "10100";
-	constant OP_OUTP:   std_logic_vector(4 downto 0) := "10101";
-	constant OP_RET:    std_logic_vector(4 downto 0) := "10110";
-	constant OP_PUSH:   std_logic_vector(4 downto 0) := "10111";
-	constant OP_POP:    std_logic_vector(4 downto 0) := "11000";
+	constant OP_LDI0:    std_logic_vector(4 downto 0) := "000--";
+	constant OP_JMP:     std_logic_vector(4 downto 0) := "001--";
+	constant OP_RJMPIFN: std_logic_vector(4 downto 0) := "010--";
+	constant OP_CALL:    std_logic_vector(4 downto 0) := "011--";
+	constant OP_MOV:     std_logic_vector(4 downto 0) := "10000";
+	constant OP_AND:     std_logic_vector(4 downto 0) := "10001";
+	constant OP_OR:      std_logic_vector(4 downto 0) := "10010";
+	constant OP_ADD:     std_logic_vector(4 downto 0) := "10011";
+	constant OP_INP:     std_logic_vector(4 downto 0) := "10100";
+	constant OP_OUTP:    std_logic_vector(4 downto 0) := "10101";
+	constant OP_RET:     std_logic_vector(4 downto 0) := "10110";
+	constant OP_PUSH:    std_logic_vector(4 downto 0) := "10111";
+	constant OP_POP:     std_logic_vector(4 downto 0) := "11000";
+	constant OP_ROR:     std_logic_vector(4 downto 0) := "11001";
 	
 	-- registers names
 	constant R0: integer := 0;
@@ -63,7 +59,8 @@ package proc_pkg is
 	constant R7: integer := 7;
 
 	function LDI0(value: integer) return std_logic_vector;
-	function JMPIFN(value: integer) return std_logic_vector;
+	function JMP(value: integer) return std_logic_vector;
+	function RJMPIFN(value: integer) return std_logic_vector;
 	function CALL(value: integer) return std_logic_vector;
 	
 	function MOV(a, b: integer) return std_logic_vector;
@@ -75,6 +72,7 @@ package proc_pkg is
 	function RET return std_logic_vector;
 	function PUSH (a: integer) return std_logic_vector;
 	function POP (a: integer) return std_logic_vector;
+	function iROR (a: integer) return std_logic_vector;
 
 	function NOP return std_logic_vector;
 	
@@ -89,11 +87,18 @@ package body proc_pkg is
 		return OP_LDI0(4 downto 2) & std_logic_vector(to_signed(value, 8));
 	end function;
 	
-	function JMPIFN(value: integer) return std_logic_vector is begin
+	function JMP(value: integer) return std_logic_vector is begin
+		assert (value >= 0) and (value <= 255)
+			report "We have only 8 bits for value! (from 0 to 255)"
+			severity failure;
+		return OP_JMP(4 downto 2) & std_logic_vector(to_unsigned(value, 8));
+	end function;
+	
+	function RJMPIFN(value: integer) return std_logic_vector is begin
 		assert (value >= -128) and (value <= 127)
 			report "We have only 8 bits for value! (from -128 to 127)"
 			severity failure;
-		return OP_JMPIFN(4 downto 2) & std_logic_vector(to_signed(value, 8));
+		return OP_RJMPIFN(4 downto 2) & std_logic_vector(to_signed(value, 8));
 	end function;
 	
 	function CALL(value: integer) return std_logic_vector is begin
@@ -162,6 +167,13 @@ package body proc_pkg is
 			report "We have only 8 registers in scratch memory!"
 			severity failure;
 		return OP_POP & std_logic_vector(to_unsigned(a, 3)) & "000";
+	end function;
+
+	function iROR(a: integer) return std_logic_vector is begin
+		assert (a >= 0) and (a < 8)
+			report "We have only 8 registers in scratch memory!"
+			severity failure;
+		return OP_ROR & std_logic_vector(to_unsigned(a, 3)) & "000";
 	end function;
 
 	

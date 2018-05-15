@@ -17,43 +17,48 @@ architecture base of memory is
 	type MEMORY_T is array(0 to (2**address'length)-1) of std_logic_vector(data'range);
 	
 	-- sum all numbers from 0 to 3
-	-- input (3) in R0
-	-- output (6) in R1
+	-- input (10) in R0
+	-- output (55) in R1
 	signal memory: MEMORY_T := (
-		--- port test
-		INP(R5),
-		OUTP(R5),
-		--- AND/OR test
-		LDI0(5),
+		--- test program
+		LDI0(0),
 		MOV(R1, R0),
-		LDI0(3),
-		iAND(R0, R1),
-		LDI0(3),
-		iOR(R0, R1),
-		--- stack test
-		LDI0(120),
-		PUSH(R0),
-		LDI0(55),
+		LDI0(-1),
 		MOV(R2, R0),
-		PUSH(R2),
-		PUSH(R0),
-		PUSH(R2),
-		POP(R5),
-		POP(R4),
-		LDI0(120),
-		PUSH(R0),
-		POP(R5),
-		--- test program 
-		LDI0(0),     --  0
-		MOV(R1, R0), --  1
-		LDI0(-1),    --  2
-		MOV(R2, R0), --  3
-		LDI0(3),     --  4
-		ADD(R1, R0), --  5
-		ADD(R0, R2), --  6
-		JMPIFN(-2),  --  7
-		LDI0(1),     --  8
-		JMPIFN(0),   --  9
+		LDI0(10), -- input
+		CALL(30),
+		ADD(R0, R2),
+		RJMPIFN(-2),
+		OUTP(R1),
+		LDI0(1),
+		RJMPIFN(0),
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+
+		-- [30] adder
+		-- input: R1, R0
+		-- output: R1 = R1 + R0
+		ADD(R1, R0),
+		RET,
+
 		others => NOP
 	);
 

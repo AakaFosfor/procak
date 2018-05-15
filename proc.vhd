@@ -63,23 +63,6 @@ begin
 			dataOut => stackDataOut
 		);
 
-	-- instruction pointer
-	pIP: process(clk) is begin
-		if rising_edge(clk) then
-			if reset = '1' then
-				IP <= (others => '0');
-			else
-				if IPEnable = '1' then
-					if std_match(opCode, OP_JMPIFN) and (fZero = '0') then
-						IP <= unsigned(signed(IP) + signed(value));
-					else
-						IP <= IP + 1;
-					end if;
-				end if;
-			end if;
-		end if;
-	end process;
-	
 	-- instruction register
 	pIR: process(clk) is begin
 		if rising_edge(clk) then
@@ -95,10 +78,12 @@ begin
 			if operandSave = '1' then
 				if std_match(opCode, OP_INP) then
 					operand <= signed(portIn);
-				elsif std_match(opCode, OP_LDI0) then
+				elsif std_match(opCode, OP_LDI0) or std_match(opCode, OP_JMP) then
 					operand <= signed(value);
-				elsif std_match(opCode, OP_POP) then
+				elsif std_match(opCode, OP_POP) or std_match(opCode, OP_RET) then
 					operand <= signed(stackDataOut);
+				elsif std_match(opCode, OP_CALL) then
+					operand <= signed(IP);
 				else
 					operand <= memory(to_integer(unsigned(RAMa)));
 				end if;
@@ -106,7 +91,7 @@ begin
 		end if;
 	end process;
 	stackPop <=
-		operandSave when std_match(opCode, OP_POP) else
+		operandSave when std_match(opCode, OP_POP) or std_match(opCode, OP_RET) else
 		'0';
 	
 	-- ALU and friends
@@ -114,7 +99,7 @@ begin
 		variable newValue: signed(7 downto 0);
 	begin
 		if rising_edge(clk) then
-			if (execute = '1') and not std_match(opCode, OP_JMPIFN) then
+			if (execute = '1') and not std_match(opCode, OP_RJMPIFN) then
 				fZero <= '0';
 				if std_match(opCode, OP_MOV) then
 					newValue := memory(to_integer(unsigned(RAMb)));
@@ -124,10 +109,16 @@ begin
 					newValue := operand and memory(to_integer(unsigned(RAMb)));
 				elsif std_match(opCode, OP_OR) then
 					newValue := operand or memory(to_integer(unsigned(RAMb)));
+				elsif std_match(opCode, OP_ROR) then
+					newValue := operand(0) & operand(7 downto 1);
 				elsif std_match(opCode, OP_LDI0)
 					or std_match(opCode, OP_INP)
 					or std_match(opCode, OP_PUSH)
-					or std_match(opCode, OP_POP) then
+					or std_match(opCode, OP_POP)
+					or std_match(opCode, OP_JMP)
+					or std_match(opCode, OP_CALL)
+					or std_match(opCode, OP_RET)
+					or std_match(opCode, OP_OUTP) then
 					newValue := operand;
 				else
 					newValue := (others => '0');
@@ -146,7 +137,12 @@ begin
 	begin
 		if rising_edge(clk) then
 			if memoryWrite = '1' then
-				if not std_match(opCode, OP_JMPIFN) and not std_match(opCode, OP_OUTP) then
+				if not std_match(opCode, OP_RJMPIFN)
+					and not std_match(opCode, OP_OUTP)
+					and not std_match(opCode, OP_JMP)
+					and not std_match(opCode, OP_CALL)
+					and not std_match(opCode, OP_RET)
+					and not std_match(opCode, OP_OUTP) then
 					if std_match(opCode, OP_LDI0) then
 						memoryAddress := 0;
 					else
@@ -160,8 +156,29 @@ begin
 		end if;
 	end process;
 	stackPush <=
-		memoryWrite when std_match(opCode, OP_PUSH) else
+		memoryWrite when std_match(opCode, OP_PUSH) or std_match(opCode, OP_CALL) else
 		'0';
+	
+	-- instruction pointer
+	pIP: process(clk) is begin
+		if rising_edge(clk) then
+			if reset = '1' then
+				IP <= (others => '0');
+			else
+				if IPEnable = '1' then
+					if std_match(opCode, OP_JMP) or std_match(opCode, OP_CALL) then
+						IP <= unsigned(value);
+					elsif std_match(opCode, OP_RET) then
+						IP <= unsigned(resultValue + 1);
+					elsif std_match(opCode, OP_RJMPIFN) and (fZero = '0') then
+						IP <= unsigned(signed(IP) + signed(value));
+					else
+						IP <= IP + 1;
+					end if;
+				end if;
+			end if;
+		end if;
+	end process;
 	
 	-- controller
 	pController: process (clk) is begin
