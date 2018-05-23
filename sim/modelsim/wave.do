@@ -1,6 +1,6 @@
 onerror {resume}
 virtual type { LDI0 LDI0 LDI0 LDI0 JMP JMP JMP JMP JMPIFN JMPIFN JMPIFN JMPIFN CALL CALL CALL CALL MOV AND OR ADD INP OUTP RET PUSH POP undef undef undef undef undef undef undef} opcode_t
-quietly virtual function -install /top_tb/i_Top/i_Proc -env /top_tb/pTimeOut { (opcode_t)/top_tb/i_Top/i_Proc/a_OpCode} OpCodeDecoded
+quietly virtual function -install /top_tb/i_Top/i_Proc -env /top_tb/ { (opcode_t)/top_tb/i_Top/i_Proc/a_OpCode} OpCodeDecoded
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /top_tb/Clk_k
 add wave -noupdate /top_tb/Reset_r
